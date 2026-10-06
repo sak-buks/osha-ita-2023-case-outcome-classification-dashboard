@@ -76,13 +76,33 @@ def tab_contexto():
         "Desarrollo": [fmt_int(cc["train"][k]) for k in "1234"],
         "Prueba": [fmt_int(cc["test"][k]) for k in "1234"],
     })
+    kpis = html.Div([
+        html.Div([html.Div("890.934", className="kpi-n"), html.Div("casos reportados a OSHA en 2023", className="kpi-t")], className="kpi"),
+        html.Div([html.Div("91.334", className="kpi-n"), html.Div("establecimientos", className="kpi-t")], className="kpi"),
+        html.Div([html.Div("4", className="kpi-n"), html.Div("resultados posibles de un caso", className="kpi-t")], className="kpi"),
+        html.Div([html.Div("0,03 %", className="kpi-n"), html.Div("terminan en fallecimiento", className="kpi-t")], className="kpi"),
+    ], className="kpis")
+    # Imagen opcional: si existe assets/header.jpg se muestra arriba (Dash sirve la carpeta assets/ solo)
+    header_img = [html.Img(src=app.get_asset_url("header.jpg"), className="hero")] \
+        if (Path(__file__).parent / "assets" / "header.jpg").exists() else []
     return html.Div([
+        *header_img,
+        kpis,
         card("La pregunta", [
             html.P("¿En qué medida las características del lugar de trabajo, la ocupación y el incidente permiten "
                    "clasificar el resultado de un caso registrado por OSHA en el último trimestre de 2023, en "
                    "establecimientos que no se usaron para construir el modelo?"),
             note("Es clasificación retrospectiva de casos ya reportados. No predice quién se lesionará ni "
                  "atribuye causas."),
+            html.P("Este tablero tiene tres pestañas: el contexto del problema, el análisis exploratorio de los datos "
+                   "(EDA) y los modelos base con sus métricas."),
+        ]),
+        card("Por qué importa", [
+            html.P("Una lesión o enfermedad laboral puede terminar en un simple registro, en traslado o restricción "
+                   "del trabajador, en días de ausencia o en un fallecimiento. Saber qué características del lugar "
+                   "de trabajo y de la ocupación se asocian con cada resultado es relevante para la salud "
+                   "ocupacional, siempre que se lea con los límites de un archivo de casos reportados "
+                   "(más abajo)."),
         ]),
         card("Los datos", [
             html.P("OSHA ITA 2023 (Form 300/301), datos abiertos del Departamento de Trabajo de EE. UU. "
@@ -105,7 +125,7 @@ def tab_contexto():
         card("Por qué es un problema difícil", [
             html.P("Fallecimiento es el 0,03 % de los casos: solo 39 en la prueba, cada uno en un establecimiento "
                    "distinto. Un modelo que siempre dice «días de ausencia» ya acierta el 36 %, así que la "
-                   "exactitud sola no sirve y se usan exactitud balanceada y F1 macro."),
+                   "accuracy sola no sirve y se usan balanced accuracy y macro F1 score."),
         ]),
         card("Límites", [
             html.Ul([
@@ -194,8 +214,8 @@ def tab_eda():
     return html.Div([
         card("1. Resultado: una clase casi no existe", [
             dcc.Graph(figure=fig_resultado()),
-            note("Fallecimiento son 69 casos de 269.516 (0,026 %). Por eso se miden exactitud balanceada y F1 macro, "
-                 "no solo exactitud, y los resultados de esa clase se leen con cautela."),
+            note("Fallecimiento son 69 casos de 269.516 (0,026 %). Por eso se miden balanced accuracy y macro F1 score, "
+                 "no solo accuracy, y los resultados de esa clase se leen con cautela."),
         ]),
         card("2. Información faltante", [
             dcc.RadioItems(id="falt-modo", options=[{"label": "Por predictor", "value": "total"},
@@ -234,14 +254,14 @@ def tab_eda():
 
 # ---------------------------------------------------------------- pestaña 3
 def tabla_metricas():
-    nombres = {"accuracy": "Exactitud", "balanced_accuracy": "Exactitud balanceada", "macro_f1": "F1 macro",
-               "roc_auc_macro_ovr": "AUC macro (uno contra el resto)"}
+    nombres = {"accuracy": "Accuracy", "balanced_accuracy": "Balanced accuracy", "macro_f1": "Macro F1 score",
+               "roc_auc_macro_ovr": "Macro AUC (one-vs-rest)"}
     filas = []
     for k, n in nombres.items():
         b = boot[(boot["metric"] == k)].set_index("model")
         lr, du = metricas.loc[k, "LogisticRegression"], metricas.loc[k, "DummyClassifier"]
         filas.append({
-            "Métrica": n,
+            "Metric": n,
             "Regresión logística": f"{fmt(lr)}  [{fmt(b.loc['LogisticRegression', 'lower'])} – "
                                    f"{fmt(b.loc['LogisticRegression', 'upper'])}]",
             "Dummy": f"{fmt(du)}  [{fmt(b.loc['DummyClassifier', 'lower'])} – {fmt(b.loc['DummyClassifier', 'upper'])}]",
@@ -258,8 +278,8 @@ def fig_confusion(modelo, norm):
     f = go.Figure(go.Heatmap(z=z.values, x=[c.split(" (")[0] for c in cm.columns], y=[c.split(" (")[0] for c in cm.index],
                              colorscale="Blues", text=txt, texttemplate="%{text}", showscale=False,
                              zmin=0, zmax=100 if norm == "pct" else None))
-    f.update_layout(**LAYOUT, title=f"Matriz de confusión: {MODEL_NAMES[modelo]}", height=420,
-                    xaxis=dict(title="Predicho"), yaxis=dict(title="Observado", autorange="reversed"))
+    f.update_layout(**LAYOUT, title=f"Confusion matrix: {MODEL_NAMES[modelo]}", height=420,
+                    xaxis=dict(title="Predicted"), yaxis=dict(title="Actual", autorange="reversed"))
     return f
 
 
@@ -272,8 +292,8 @@ def fig_curvas(tipo):
             a = auc_clase.set_index("clase").loc[c, "auc"]
             f.add_trace(go.Scatter(x=d["fpr"], y=d["tpr"], mode="lines", name=f"{c.split(' (')[0]} (AUC {fmt(a)})",
                                    line=dict(color=COLORS[c])))
-        f.update_layout(**LAYOUT, title="Curvas ROC, una clase contra el resto (regresión logística)",
-                        xaxis=dict(title="Tasa de falsos positivos"), yaxis=dict(title="Sensibilidad"), height=430)
+        f.update_layout(**LAYOUT, title="ROC curves, one class vs the rest (logistic regression)",
+                        xaxis=dict(title="False positive rate"), yaxis=dict(title="Recall (true positive rate)"), height=430)
     else:
         for c in CLASSES[1:]:
             d = pr[pr["clase"] == c]
@@ -281,8 +301,8 @@ def fig_curvas(tipo):
             f.add_trace(go.Scatter(x=d["recall"], y=d["precision"], mode="lines",
                                    name=f"{c} (AP {fmt(a['ap'])}; base {fmt(a['prevalencia'])})",
                                    line=dict(color=COLORS[c])))
-        f.update_layout(**LAYOUT, title="Precisión-sensibilidad (las tres clases frecuentes)",
-                        xaxis=dict(title="Sensibilidad"), yaxis=dict(title="Precisión", range=[0, 1]), height=430)
+        f.update_layout(**LAYOUT, title="Precision-Recall curves (the three frequent classes)",
+                        xaxis=dict(title="Recall"), yaxis=dict(title="Precision", range=[0, 1]), height=430)
     f.update_layout(legend=dict(orientation="h", y=-0.3))
     return f
 
@@ -291,12 +311,12 @@ def fig_aprendizaje():
     g = curva.groupby("fraccion").agg(casos=("casos", "mean"), ent=("entrenamiento", "mean"),
                                       val=("validacion", "mean"), vstd=("validacion", "std")).reset_index()
     f = go.Figure()
-    f.add_trace(go.Scatter(x=g["casos"], y=g["ent"], mode="lines+markers", name="Entrenamiento",
+    f.add_trace(go.Scatter(x=g["casos"], y=g["ent"], mode="lines+markers", name="Training",
                            line=dict(color="#377eb8")))
-    f.add_trace(go.Scatter(x=g["casos"], y=g["val"], mode="lines+markers", name="Validación cronológica",
+    f.add_trace(go.Scatter(x=g["casos"], y=g["val"], mode="lines+markers", name="Validation (forward in time)",
                            line=dict(color="#e66101")))
-    f.update_layout(**LAYOUT, title="Curva de aprendizaje: exactitud balanceada (media de 3 pliegues)",
-                    xaxis=dict(title="Casos de entrenamiento (promedio)"), yaxis=dict(title="Exactitud balanceada",
+    f.update_layout(**LAYOUT, title="Learning curve: balanced accuracy (mean of 3 folds)",
+                    xaxis=dict(title="Training cases (average)"), yaxis=dict(title="Balanced accuracy",
                     range=[0.3, 0.75]), height=400, legend=dict(orientation="h", y=-0.25))
     return f
 
@@ -330,30 +350,52 @@ def bloque_coeficientes():
     ])]
 
 
+def tabla_modelos():
+    filas = []
+    for m in ("LogisticRegression", "DummyClassifier"):
+        pc = por_clase[por_clase["modelo"] == m]
+        filas.append({"Model": MODEL_NAMES[m], "Accuracy": fmt(metricas.loc["accuracy", m]),
+                      "Precision (macro)": fmt(pc["precision"].mean()), "Recall (macro)": fmt(pc["sensibilidad"].mean()),
+                      "F1 score (macro)": fmt(metricas.loc["macro_f1", m]),
+                      "AUC (macro, OvR)": fmt(metricas.loc["roc_auc_macro_ovr", m])})
+    return dash_table.DataTable(filas, [{"name": c, "id": c} for c in filas[0]],
+                                style_cell={"textAlign": "left", "padding": "6px"},
+                                style_header={"fontWeight": "600"})
+
+
 def tab_modelos():
-    lr_cls = por_clase[por_clase["modelo"] == "LogisticRegression"].copy()
-    lr_cls["Precisión"] = lr_cls["precision"].map(fmt)
-    lr_cls["Sensibilidad"] = lr_cls["sensibilidad"].map(fmt)
-    lr_cls["F1"] = lr_cls["f1"].map(fmt)
-    lr_cls["Casos"] = lr_cls["casos"].map(fmt_int)
-    lr_cls = lr_cls.rename(columns={"clase": "Resultado"})[["Resultado", "Precisión", "Sensibilidad", "F1", "Casos"]]
+    cls = por_clase.copy()
+    cls["Model"] = cls["modelo"].map(MODEL_NAMES)
+    cls["Precision"] = cls["precision"].map(fmt)
+    cls["Recall"] = cls["sensibilidad"].map(fmt)
+    cls["F1 score"] = cls["f1"].map(fmt)
+    cls["Support"] = cls["casos"].map(fmt_int)
+    cls = cls.rename(columns={"clase": "Resultado"})[["Model", "Resultado", "Precision", "Recall", "F1 score", "Support"]]
     return html.Div([
-        card("Regresión logística frente a la línea base (prueba: octubre-diciembre, empresas nuevas)", [
+        card("Metrics by model (prueba: octubre-diciembre, empresas nuevas)", [
+            html.P("Cada fila es un modelo evaluado sobre los mismos 127.391 casos. Precision, recall y F1 son el "
+                   "promedio simple de las 4 clases (macro). El recall macro es igual a la balanced accuracy."),
+            tabla_modelos(),
+        ]),
+        card("Regresión logística frente a la línea base, con intervalos de confianza", [
             html.P("Valor [intervalo de confianza del 95 % por bootstrap de establecimientos]."),
             tabla_metricas(),
             note("La logística mejora a la línea base en todas las métricas y los intervalos no se solapan, pero el "
-                 "nivel es moderado: acierta 52 % de los casos. Una exactitud tan lejos del 80-90 % no es señal de "
+                 "nivel es moderado: acierta 52 % de los casos. Una accuracy tan lejos del 80-90 % no es señal de "
                  "fuga de información. El intervalo cubre solo la variación entre establecimientos de este "
                  "trimestre, no la del entrenamiento."),
         ]),
-        card("Resultado por clase", [
-            dash_table.DataTable(lr_cls.to_dict("records"), [{"name": c, "id": c} for c in lr_cls.columns],
+        card("Metrics by class", [
+            dash_table.DataTable(cls.to_dict("records"), [{"name": c, "id": c} for c in cls.columns],
                                  style_cell={"textAlign": "left", "padding": "6px"},
-                                 style_header={"fontWeight": "600"}),
-            note("Fallecimiento: el modelo identifica 1 de 39 casos (sensibilidad 2,6 %; intervalo de Wilson "
-                 "0,5 %-13,2 %). Con tan pocos casos no se puede afirmar nada fiable sobre esa clase."),
+                                 style_header={"fontWeight": "600"},
+                                 style_data_conditional=[{"if": {"filter_query": '{Model} = "' + MODEL_NAMES["DummyClassifier"] + '"'},
+                                                          "color": "#6b7280"}]),
+            note("Fallecimiento: la logística identifica 1 de 39 casos (recall 2,6 %; intervalo de Wilson "
+                 "0,5 %-13,2 %). Con tan pocos casos no se puede afirmar nada fiable sobre esa clase. El Dummy "
+                 "predice siempre «días de ausencia», por eso su recall es 1 en esa clase y 0 en las demás."),
         ]),
-        card("Matriz de confusión", [
+        card("Confusion matrix", [
             html.Div([
                 dcc.RadioItems(id="cm-modelo", options=[{"label": MODEL_NAMES[m], "value": m} for m in MODEL_NAMES],
                                value="LogisticRegression", inline=True),
@@ -365,16 +407,16 @@ def tab_modelos():
             note("Cada fila suma 100 % de los casos reales de esa clase. El Dummy manda todo a «días de ausencia». "
                  "La logística confunde sobre todo las tres clases frecuentes entre sí."),
         ]),
-        card("Curvas ROC y precisión-sensibilidad", [
+        card("ROC and Precision-Recall curves", [
             dcc.RadioItems(id="curva-tipo", options=[{"label": "ROC", "value": "roc"},
-                                                     {"label": "Precisión-sensibilidad", "value": "pr"}],
+                                                     {"label": "Precision-Recall", "value": "pr"}],
                            value="roc", inline=True),
             dcc.Graph(id="curva-fig", figure=fig_curvas("roc")),
             note("Las tres clases frecuentes quedan entre 0,70 y 0,73 de AUC; Fallecimiento 0,61, con un intervalo "
-                 "muy amplio por sus 39 casos. En precisión-sensibilidad la línea de base de cada clase es su "
+                 "muy amplio por sus 39 casos. En la curva Precision-Recall la línea de base de cada clase es su "
                  "proporción de casos: la logística la supera, pero con margen modesto."),
         ]),
-        card("Curva de aprendizaje", [
+        card("Learning curve", [
             dcc.Graph(figure=fig_aprendizaje()),
             note("La validación casi no mejora con más datos (0,377 a 0,385) y la distancia con el entrenamiento "
                  "sigue siendo grande: no parece que más casos, con estos 8 predictores y un modelo lineal, "
@@ -390,8 +432,7 @@ server = app.server  # gunicorn app:server
 
 app.layout = html.Div([
     html.H1("OSHA ITA 2023: ¿qué resultado tiene un caso reportado?"),
-    html.P("Machine Learning, entregable 2. Clasificación de 4 resultados con regresión logística frente a una "
-           "línea base trivial.", className="sub"),
+    html.P("Tablero de visualización: contexto del problema, análisis exploratorio y modelos base.", className="sub"),
     dcc.Tabs(id="tabs", value="contexto", children=[
         dcc.Tab(label="1. Contexto del problema", value="contexto"),
         dcc.Tab(label="2. EDA", value="eda"),
@@ -433,9 +474,13 @@ h1{font-size:1.6rem;margin:8px 0 0}.sub{color:#52606d;margin-top:4px}
 .card{background:#fff;border:1px solid #e4e7eb;border-radius:8px;padding:12px 16px;margin:14px 0}
 .card h3{margin:4px 0 8px;font-size:1.05rem}
 .note{color:#323f4b;background:#f0f4f8;border-left:3px solid #377eb8;padding:8px 10px;border-radius:4px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+.kpi{background:#0f3d63;color:#fff;border-radius:8px;padding:14px 12px;text-align:center}
+.kpi-n{font-size:1.8rem;font-weight:700}.kpi-t{font-size:.85rem;opacity:.9}
+.hero{width:100%;max-height:260px;object-fit:cover;border-radius:8px;margin-top:14px}
 .controls{display:flex;gap:28px;flex-wrap:wrap}
 label{margin-right:14px}
-@media(max-width:600px){.page{padding:8px}}
+@media(max-width:600px){.page{padding:8px}.kpis{grid-template-columns:repeat(2,1fr)}}
 </style></head>""")
 
 if __name__ == "__main__":
