@@ -1,0 +1,9 @@
+modelo,clase,precision,sensibilidad,f1,casos
+LogisticRegression,Fallecimiento (Death),0.00033266799733865603,0.02564102564102564,0.0006568144499178982,39
+LogisticRegression,Días de ausencia,0.6004716136350069,0.43572527020295004,0.505001819984687,46169
+LogisticRegression,Traslado / restricción,0.47760750907803684,0.5617093282479654,0.516255646893283,37231
+LogisticRegression,Otro caso registrable,0.5456089689145575,0.5846377866763742,0.5644495211317108,43952
+DummyClassifier,Fallecimiento (Death),0.0,0.0,0.0,39
+DummyClassifier,Días de ausencia,0.36241963718002057,1.0,0.532023507720673,46169
+DummyClassifier,Traslado / restricción,0.0,0.0,0.0,37231
+DummyClassifier,Otro caso registrable,0.0,0.0,0.0,43952

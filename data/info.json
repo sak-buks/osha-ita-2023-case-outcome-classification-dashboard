@@ -1,0 +1,33 @@
+{
+ "train_rows": 269516,
+ "test_rows": 127391,
+ "train_groups": 34029,
+ "test_groups": 34182,
+ "encoded_features": 1433,
+ "class_counts": {
+  "train": {
+   "1": 69,
+   "2": 99697,
+   "3": 79848,
+   "4": 89902
+  },
+  "test": {
+   "1": 39,
+   "2": 46169,
+   "3": 37231,
+   "4": 43952
+  }
+ },
+ "death_sensitivity_wilson_ci95": [
+  0.004540703100990098,
+  0.13180990169850076
+ ],
+ "death_correctly_identified": 1,
+ "sklearn": "1.2.2",
+ "parametros": {
+  "solver": "newton-cg",
+  "max_iter": 1000,
+  "class_weight": "balanced",
+  "random_state": 42
+ }
+}

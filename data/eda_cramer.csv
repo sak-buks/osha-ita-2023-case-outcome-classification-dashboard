@@ -1,0 +1,7 @@
+predictor,cramer_v,nmi
+naics_code,0.236,0.033
+soc_code,0.206,0.025
+type_of_incident,0.15,0.045
+state,0.121,0.01
+establishment_type,0.056,0.007
+time_unknown,0.055,0.004

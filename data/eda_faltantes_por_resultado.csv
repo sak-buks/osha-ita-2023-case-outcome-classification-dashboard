@@ -1,0 +1,5 @@
+resultado,state,naics_code,establishment_type,soc_code,type_of_incident,time_unknown,time_started_work_hour,time_of_incident_hour
+Fallecimiento (Death),0.0,0.0,0.0,15.942,0.0,0.0,13.043,13.043
+Días de ausencia,0.0,0.0,0.067,17.746,0.0,0.206,12.964,16.201
+Traslado / restricción,0.0,0.0,0.114,18.659,0.0,0.162,10.099,9.747
+Otro caso registrable,0.0,0.0,0.166,20.486,0.0,0.242,13.367,13.718

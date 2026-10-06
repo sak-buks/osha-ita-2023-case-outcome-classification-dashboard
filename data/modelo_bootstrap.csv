@@ -1,0 +1,9 @@
+model,metric,lower,upper,replicates
+DummyClassifier,accuracy,0.35615788032571005,0.36892273477116666,1000
+DummyClassifier,balanced_accuracy,0.25,0.25,1000
+DummyClassifier,macro_f1,0.13131136326836504,0.13474929059144278,1000
+DummyClassifier,roc_auc_macro_ovr,0.5,0.5,200
+LogisticRegression,accuracy,0.5176452642189009,0.5303880949048272,1000
+LogisticRegression,balanced_accuracy,0.39213247796896616,0.41602692562705784,1000
+LogisticRegression,macro_f1,0.3920522443162971,0.4015382101037107,1000
+LogisticRegression,roc_auc_macro_ovr,0.6710204904924352,0.714740079884642,200
